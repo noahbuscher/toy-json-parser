@@ -1,10 +1,13 @@
 import Parser from "./parser";
 
-const SAMPLE_JSON = `
+/**
+ * Using String.raw to preserve escape chars to emulate
+ * a JSON response blob
+ */
+const SAMPLE_JSON = String.raw`
 [
 	{
-		"teamName": "Globo Gym Purple Cobras",
-		"slogan": "We are the Globo Gym Purple Cobras. And we will... We will... Rock you!",
+		"slogan": "We are the Globo Gym \"Purple\" Cobras. And we will... We will... Rock you!",
 		"badGuys": true,
 		"members": [
 			"White Goodman",
@@ -23,7 +26,7 @@ const run = (input: string) => {
     const parser = new Parser();
     const parsedJSON: any = parser.parse(input);
 
-    console.log("Parsed sucessfully:\n\n", parsedJSON);
+    console.log("Parsed sucessfully:\n\n", parsedJSON[0]);
   } catch (e: any) {
     console.error("Failed to parse JSON:");
     console.error(e.message);

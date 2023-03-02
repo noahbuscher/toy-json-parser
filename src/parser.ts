@@ -4,10 +4,10 @@
  * https://www.rfc-editor.org/rfc/rfc8259#section-2
  */
 const JSON_syntax = {
-  LEFT_SQUARE_BRACKET: String.fromCharCode(91),
-  LEFT_CURLY_BRACKET: String.fromCharCode(123),
-  RIGHT_SQUARE_BRACKET: String.fromCharCode(93),
-  RIGHT_CURLY_BRACKET: String.fromCharCode(125),
+  BEGIN_ARRAY: String.fromCharCode(91), // [
+  BEGIN_OBJECT: String.fromCharCode(123), // {
+  END_ARRAY: String.fromCharCode(93), // ]
+  END_OBJECT: String.fromCharCode(125), // }
   NAME_SEPARATOR: String.fromCharCode(58), // Colon
   VALUE_SEPARATOR: String.fromCharCode(44), // Comma
 };
@@ -60,7 +60,7 @@ export default class JSONParser {
    * Input: `{ "name": "John" }`   ->   Output: ["{", "name", ":", "John", "}"]
    */
   lex = (blob: string): Token[] => {
-    const chars = blob.split("");
+    const chars = [...blob];
     let tokens: Token[] = [];
 
     while (chars.length > 0) {
@@ -83,10 +83,12 @@ export default class JSONParser {
       if (chars[0] === QUOTATION_MARK) {
         // Remote first quote
         chars.shift();
-        const stringToken = this.lexString(chars);
+
+        // Un
+        const [length, stringToken] = this.lexString(chars);
 
         // +1 to remove second quote
-        chars.splice(0, stringToken.text.length + 1);
+        chars.splice(0, length + 1);
         tokens.push(stringToken);
         continue;
       }
@@ -100,8 +102,6 @@ export default class JSONParser {
         continue;
       }
 
-      // @todo Parse numbers
-
       throw new Error(`[lexer] Invalid character, "${chars[0]}", found.`);
     }
 
@@ -109,27 +109,45 @@ export default class JSONParser {
   };
 
   /**
-   * Tokenizes a string
+   * Tokenizes a string; also returns the length of the number
+   * of characters consumed, as the length may be larger than the
+   * initial string if there were escape chars, etc.
    *
    * Example:
    * Input: `name": "Noah" }`   ->   Output: "name"
    */
-  lexString = (chars: string[]): Token => {
+  lexString = (chars: string[]): [number, Token] => {
+    let c = [...chars];
+    let length = 0;
     let str = "";
 
     while (true) {
-      if (chars[str.length] !== QUOTATION_MARK) {
-        str += chars[str.length];
+      const isQuote = c[0] === QUOTATION_MARK;
+      const isEscapeChar = c[0] === "\\";
+
+      if (!isQuote && !isEscapeChar) {
+        str += c[0];
+        length++;
+        c.shift();
       } else {
-        break;
+        if (!isEscapeChar) {
+          break;
+        } else {
+          str += c[1];
+          length += 2;
+          c.splice(0, 2);
+        }
       }
     }
 
-    return {
-      type: token_types.STRING,
-      text: str,
-      value: str,
-    };
+    return [
+      length,
+      {
+        type: token_types.STRING,
+        text: str,
+        value: str,
+      },
+    ];
   };
 
   /**
@@ -171,9 +189,9 @@ export default class JSONParser {
   parseTokens = (
     tokens: Token[]
   ): [Token[], OutputObject | OutputArray | TokenValue] => {
-    if (tokens[0].value === JSON_syntax.LEFT_CURLY_BRACKET) {
+    if (tokens[0].value === JSON_syntax.BEGIN_OBJECT) {
       return this.parseObject(tokens.slice(1));
-    } else if (tokens[0].value === JSON_syntax.LEFT_SQUARE_BRACKET) {
+    } else if (tokens[0].value === JSON_syntax.BEGIN_ARRAY) {
       return this.parseArray(tokens.slice(1));
     } else {
       // If not an array or object, the token must be a value
@@ -209,12 +227,13 @@ export default class JSONParser {
 
       if (t[0].text === JSON_syntax.VALUE_SEPARATOR) t.shift();
 
-      if (t[0].text === JSON_syntax.RIGHT_CURLY_BRACKET)
-        return [t.slice(1), output];
+      if (t[0].text === JSON_syntax.END_OBJECT) return [t.slice(1), output];
     }
 
-    if (t[0].text !== JSON_syntax.RIGHT_SQUARE_BRACKET)
-      throw new Error(`[parser.object] Missing expected "}".`);
+    if (t[0].text !== JSON_syntax.END_ARRAY)
+      throw new Error(
+        `[parser.object] Missing expected "${JSON_syntax.END_ARRAY}".`
+      );
 
     return [t, output];
   };
@@ -234,12 +253,13 @@ export default class JSONParser {
 
       if (t[0].text === JSON_syntax.VALUE_SEPARATOR) t.shift();
 
-      if (t[0].text === JSON_syntax.RIGHT_SQUARE_BRACKET)
-        return [t.slice(1), output];
+      if (t[0].text === JSON_syntax.END_ARRAY) return [t.slice(1), output];
     }
 
-    if (t[0].text !== JSON_syntax.RIGHT_SQUARE_BRACKET)
-      throw new Error(`[parser.array] Missing expected "]".`);
+    if (t[0].text !== JSON_syntax.END_ARRAY)
+      throw new Error(
+        `[parser.array] Missing expected "${JSON_syntax.END_ARRAY}".`
+      );
 
     return [t, output];
   };
