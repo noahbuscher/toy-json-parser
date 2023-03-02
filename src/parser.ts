@@ -230,9 +230,9 @@ export default class JSONParser {
       if (t[0].text === JSON_syntax.END_OBJECT) return [t.slice(1), output];
     }
 
-    if (t[0].text !== JSON_syntax.END_ARRAY)
+    if (t[0].text !== JSON_syntax.END_OBJECT)
       throw new Error(
-        `[parser.object] Missing expected "${JSON_syntax.END_ARRAY}".`
+        `[parser.object] Missing expected "${JSON_syntax.END_OBJECT}".`
       );
 
     return [t, output];
@@ -245,7 +245,7 @@ export default class JSONParser {
     const output: OutputArray = [];
     let t: Token[] = [...tokens];
 
-    while (t.length > 0) {
+    while (t.length > 1) {
       // output.push(t.shift()?.value);
       const [outputTokens, value] = this.parseTokens(t);
       output.push(value);
