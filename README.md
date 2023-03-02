@@ -22,5 +22,5 @@ const jsonBlob = `
 const parser = new Parser();
 
 // Lex, parse, and retrieve the JS object
-const parsedJSON = parser.parse();
+const parsedJSON = parser.parse(jsonBlob);
 ```
