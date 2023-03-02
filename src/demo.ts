@@ -25,7 +25,6 @@ const run = (input: string) => {
 
     console.log("Parsed sucessfully:\n\n", parsedJSON);
   } catch (e: any) {
-    // @todo Fix type
     console.error("Failed to parse JSON:");
     console.error(e.message);
   }
