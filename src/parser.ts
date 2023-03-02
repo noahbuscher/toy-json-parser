@@ -8,8 +8,8 @@ const JSON_syntax = {
   BEGIN_OBJECT: String.fromCharCode(123), // {
   END_ARRAY: String.fromCharCode(93), // ]
   END_OBJECT: String.fromCharCode(125), // }
-  NAME_SEPARATOR: String.fromCharCode(58), // Colon
-  VALUE_SEPARATOR: String.fromCharCode(44), // Comma
+  NAME_SEPARATOR: String.fromCharCode(58), // :
+  VALUE_SEPARATOR: String.fromCharCode(44), // ,
 };
 
 const QUOTATION_MARK = String.fromCharCode(34);
