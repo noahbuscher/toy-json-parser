@@ -24,3 +24,8 @@ const parser = new Parser();
 // Lex, parse, and retrieve the JS object
 const parsedJSON = parser.parse(jsonBlob);
 ```
+
+### Todo
+
+- [ ] [Numbers](https://www.rfc-editor.org/rfc/rfc8259#section-6) support
+- [ ] `null` support
