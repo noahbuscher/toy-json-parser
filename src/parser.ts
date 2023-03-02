@@ -84,7 +84,6 @@ export default class JSONParser {
         // Remote first quote
         chars.shift();
 
-        // Un
         const [length, stringToken] = this.lexString(chars);
 
         // +1 to remove second quote
