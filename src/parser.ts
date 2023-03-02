@@ -157,10 +157,13 @@ export default class JSONParser {
    * Input: `isActive": "Noah" }`   ->   Output: true
    */
   lexBoolean = (chars: string[]): Token => {
-    // Here we "peek" ahead to see if the boolean is followed by a comma
+    // Here we "peek" ahead to see if the boolean is followed by a comma or ending symbol
     if (
       chars.slice(0, 4).join("") === "true" &&
-      chars[4] === JSON_syntax.VALUE_SEPARATOR
+      (chars[4] === JSON_syntax.VALUE_SEPARATOR ||
+        chars[4] === JSON_syntax.END_OBJECT ||
+        chars[4] === JSON_syntax.END_ARRAY ||
+        Object.values(JSON_whitespace).includes(chars[5]))
     ) {
       return {
         type: token_types.BOOLEAN,
@@ -171,7 +174,10 @@ export default class JSONParser {
 
     if (
       chars.slice(0, 5).join("") === "false" &&
-      chars[5] === JSON_syntax.VALUE_SEPARATOR
+      (chars[5] === JSON_syntax.VALUE_SEPARATOR ||
+        chars[5] === JSON_syntax.END_OBJECT ||
+        chars[5] === JSON_syntax.END_ARRAY ||
+        Object.values(JSON_whitespace).includes(chars[5]))
     ) {
       return {
         type: token_types.BOOLEAN,
@@ -206,13 +212,15 @@ export default class JSONParser {
     const output: OutputObject = {};
     let t: Token[] = [...tokens];
 
-    while (t.length > 1) {
-      // Get key token and shift
+    while (true) {
+      if (t[0].type !== "string") break;
       const objectKey = t.shift()!;
 
-      // Ensure trailing colon and shift
+      // Ensure trailing name seperator (:) and shift
       if (t[0].value !== JSON_syntax.NAME_SEPARATOR) {
-        throw new Error(`[parser.object] Invalid character, "${t[0]}", found.`);
+        throw new Error(
+          `[parser.object] Invalid character, "${t[0]}", found. Expected "${JSON_syntax.NAME_SEPARATOR}".`
+        );
       }
       t.shift();
 
@@ -225,17 +233,19 @@ export default class JSONParser {
       output[objectKey.text] = objectValue;
       t = outputTokens;
 
-      if (t[0].text === JSON_syntax.VALUE_SEPARATOR) t.shift();
+      if (t[0].text === JSON_syntax.VALUE_SEPARATOR) {
+        if (t[1].text === JSON_syntax.END_OBJECT)
+          throw new Error(`[parser.object] No trailing commas allowed.`);
+
+        t.shift();
+      }
 
       if (t[0].text === JSON_syntax.END_OBJECT) return [t.slice(1), output];
     }
 
-    if (t[0].text !== JSON_syntax.END_OBJECT)
-      throw new Error(
-        `[parser.object] Missing expected "${JSON_syntax.END_OBJECT}".`
-      );
-
-    return [t, output];
+    throw new Error(
+      `[parser.object] Missing expected "${JSON_syntax.END_OBJECT}".`
+    );
   };
 
   /**
@@ -245,22 +255,32 @@ export default class JSONParser {
     const output: OutputArray = [];
     let t: Token[] = [...tokens];
 
-    while (t.length > 1) {
-      // output.push(t.shift()?.value);
+    while (true) {
       const [outputTokens, value] = this.parseTokens(t);
+
+      if (
+        !Array.isArray(value) &&
+        Object.values(JSON_syntax).includes(value as string)
+      )
+        break;
+
       output.push(value);
       t = outputTokens;
 
-      if (t[0].text === JSON_syntax.VALUE_SEPARATOR) t.shift();
+      if (!t.length) break;
+
+      if (t[0].text === JSON_syntax.VALUE_SEPARATOR) {
+        if (t[1].text === JSON_syntax.END_ARRAY)
+          throw new Error(`[parser.array] No trailing commas allowed.`);
+
+        t.shift();
+      }
 
       if (t[0].text === JSON_syntax.END_ARRAY) return [t.slice(1), output];
     }
 
-    if (t[0].text !== JSON_syntax.END_ARRAY)
-      throw new Error(
-        `[parser.array] Missing expected "${JSON_syntax.END_ARRAY}".`
-      );
-
-    return [t, output];
+    throw new Error(
+      `[parser.array] Missing expected "${JSON_syntax.END_ARRAY}".`
+    );
   };
 }

@@ -8,7 +8,6 @@ const SAMPLE_JSON = String.raw`
 [
 	{
 		"slogan": "We are the Globo Gym \"Purple\" Cobras. And we will... We will... Rock you!",
-		"badGuys": true,
 		"members": [
 			"White Goodman",
 			"Fran Stalinovskovichdavidovitchsky",
