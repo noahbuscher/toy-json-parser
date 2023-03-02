@@ -132,11 +132,12 @@ export default class JSONParser {
       } else {
         if (!isEscapeChar) {
           break;
-        } else {
-          str += c[1];
-          length += 2;
-          c.splice(0, 2);
         }
+
+        // Get unescaped char and jump over solidus (\)
+        str += c[1];
+        length += 2;
+        c.splice(0, 2);
       }
     }
 
