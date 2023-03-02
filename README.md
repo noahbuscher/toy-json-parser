@@ -1,8 +1,8 @@
-# (Yet Another) Toy Parser
+# (Yet Another) Toy JSON Parser
 
 `./src/parser.ts` is a **toy** JSON parser built in Typescript to educate myself a bit better on how lexers (tokenizers) and parsers work. I thought JSON would be easy enough as the spec is relatively small.
 
-Please do not rely on this library. It's not fully to spec.
+Please do not rely on this library. It's not fully to [spec](https://www.rfc-editor.org/rfc/rfc8259).
 
 ### Use
 
@@ -29,3 +29,7 @@ const parsedJSON = parser.parse(jsonBlob);
 
 - [ ] [Numbers](https://www.rfc-editor.org/rfc/rfc8259#section-6) support
 - [ ] `null` support
+- [x] Array support
+- [x] Object support
+- [x] String support
+- [x] Boolean support
