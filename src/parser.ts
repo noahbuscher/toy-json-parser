@@ -3,7 +3,7 @@
  *
  * https://www.rfc-editor.org/rfc/rfc8259#section-2
  */
-const JSON_syntax = {
+const SYNTAX_TOKENS = {
   BEGIN_ARRAY: String.fromCharCode(91), // [
   BEGIN_OBJECT: String.fromCharCode(123), // {
   END_ARRAY: String.fromCharCode(93), // ]
@@ -19,27 +19,26 @@ const QUOTATION_MARK = String.fromCharCode(34);
  *
  * https://www.rfc-editor.org/rfc/rfc8259#section-2
  */
-const JSON_whitespace = {
+const WHITESPACE_TOKENS = {
   SPACE: String.fromCharCode(32),
   TAB: String.fromCharCode(9),
   NEWLINE: String.fromCharCode(10),
 };
 
-enum token_types {
-  BOOLEAN = "boolean",
-  STRING = "string",
-  NUMBER = "number",
-  SYNTAX = "syntax",
-}
+const TOKEN_TYPES = {
+  BOOLEAN: "BOOLEAN",
+  STRING: "STRING",
+  NUMBER: "NUMBER",
+  SYNTAX: "SYNTAX",
+};
 
 /**
  * Types
  */
-type TokenType = "boolean" | "string" | "number" | "syntax";
+type TokenType = typeof TOKEN_TYPES[keyof typeof TOKEN_TYPES];
 type TokenValue = string | boolean | number;
 type Token = {
   type: TokenType;
-  text: string;
   value: TokenValue;
 };
 type OutputObject = { [key: string]: any };
@@ -55,25 +54,21 @@ export default class JSONParser {
 
   /**
    * Splits the JSON blob into "tokens" or meaningful strings
-   *
-   * Example:
-   * Input: `{ "name": "John" }`   ->   Output: ["{", "name", ":", "John", "}"]
    */
   lex = (blob: string): Token[] => {
     const chars = [...blob];
     let tokens: Token[] = [];
 
     while (chars.length > 0) {
-      if (Object.values(JSON_whitespace).includes(chars[0])) {
+      if (Object.values(WHITESPACE_TOKENS).includes(chars[0])) {
         chars.shift();
         continue;
       }
 
-      if (Object.values(JSON_syntax).includes(chars[0])) {
+      if (Object.values(SYNTAX_TOKENS).includes(chars[0])) {
         const value = chars.shift()!;
         tokens.push({
-          type: token_types.SYNTAX,
-          text: value,
+          type: TOKEN_TYPES.SYNTAX,
           value: value,
         });
         continue;
@@ -96,7 +91,7 @@ export default class JSONParser {
       if (chars[0] === "t" || chars[0] === "f") {
         const booleanToken = this.lexBoolean(chars);
 
-        chars.splice(0, booleanToken.text.length);
+        chars.splice(0, booleanToken.value.toString().length);
         tokens.push(booleanToken);
         continue;
       }
@@ -111,9 +106,6 @@ export default class JSONParser {
    * Tokenizes a string; also returns the length of the number
    * of characters consumed, as the length may be larger than the
    * initial string if there were escape chars, etc.
-   *
-   * Example:
-   * Input: `name": "Noah" }`   ->   Output: "name"
    */
   lexString = (chars: string[]): [number, Token] => {
     let c = [...chars];
@@ -143,8 +135,7 @@ export default class JSONParser {
     return [
       length,
       {
-        type: token_types.STRING,
-        text: str,
+        type: TOKEN_TYPES.STRING,
         value: str,
       },
     ];
@@ -152,36 +143,30 @@ export default class JSONParser {
 
   /**
    * Tokenizes a boolean
-   *
-   * Example:
-   * Input: `isActive": "Noah" }`   ->   Output: true
    */
   lexBoolean = (chars: string[]): Token => {
-    // Here we "peek" ahead to see if the boolean is followed by a comma or ending symbol
     if (
       chars.slice(0, 4).join("") === "true" &&
-      (chars[4] === JSON_syntax.VALUE_SEPARATOR ||
-        chars[4] === JSON_syntax.END_OBJECT ||
-        chars[4] === JSON_syntax.END_ARRAY ||
-        Object.values(JSON_whitespace).includes(chars[5]))
+      (chars[4] === SYNTAX_TOKENS.VALUE_SEPARATOR ||
+        chars[4] === SYNTAX_TOKENS.END_OBJECT ||
+        chars[4] === SYNTAX_TOKENS.END_ARRAY ||
+        Object.values(WHITESPACE_TOKENS).includes(chars[5]))
     ) {
       return {
-        type: token_types.BOOLEAN,
-        text: "true",
+        type: TOKEN_TYPES.BOOLEAN,
         value: true,
       };
     }
 
     if (
       chars.slice(0, 5).join("") === "false" &&
-      (chars[5] === JSON_syntax.VALUE_SEPARATOR ||
-        chars[5] === JSON_syntax.END_OBJECT ||
-        chars[5] === JSON_syntax.END_ARRAY ||
-        Object.values(JSON_whitespace).includes(chars[5]))
+      (chars[5] === SYNTAX_TOKENS.VALUE_SEPARATOR ||
+        chars[5] === SYNTAX_TOKENS.END_OBJECT ||
+        chars[5] === SYNTAX_TOKENS.END_ARRAY ||
+        Object.values(WHITESPACE_TOKENS).includes(chars[5]))
     ) {
       return {
-        type: token_types.BOOLEAN,
-        text: "false",
+        type: TOKEN_TYPES.BOOLEAN,
         value: false,
       };
     }
@@ -195,9 +180,9 @@ export default class JSONParser {
   parseTokens = (
     tokens: Token[]
   ): [Token[], OutputObject | OutputArray | TokenValue] => {
-    if (tokens[0].value === JSON_syntax.BEGIN_OBJECT) {
+    if (tokens[0].value === SYNTAX_TOKENS.BEGIN_OBJECT) {
       return this.parseObject(tokens.slice(1));
-    } else if (tokens[0].value === JSON_syntax.BEGIN_ARRAY) {
+    } else if (tokens[0].value === SYNTAX_TOKENS.BEGIN_ARRAY) {
       return this.parseArray(tokens.slice(1));
     } else {
       // If not an array or object, the token must be a value
@@ -213,38 +198,33 @@ export default class JSONParser {
     let t: Token[] = [...tokens];
 
     while (true) {
-      if (t[0].type !== "string") break;
+      if (t[0].type !== TOKEN_TYPES.STRING) break;
       const objectKey = t.shift()!;
 
       // Ensure trailing name seperator (:) and shift
-      if (t[0].value !== JSON_syntax.NAME_SEPARATOR) {
+      if (t[0].value !== SYNTAX_TOKENS.NAME_SEPARATOR) {
         throw new Error(
-          `[parser.object] Invalid character, "${t[0]}", found. Expected "${JSON_syntax.NAME_SEPARATOR}".`
+          `[parser.object] Invalid character, "${t[0]}", found. Expected "${SYNTAX_TOKENS.NAME_SEPARATOR}".`
         );
       }
       t.shift();
 
-      /**
-       * Get the value for the key. This may be a primitive value, an array,
-       * or another object! We also want to set the tokens to the slice
-       * returned from `parseTokens`.
-       */
       const [outputTokens, objectValue] = this.parseTokens(t);
-      output[objectKey.text] = objectValue;
+      output[objectKey.value.toString()] = objectValue;
       t = outputTokens;
 
-      if (t[0].text === JSON_syntax.VALUE_SEPARATOR) {
-        if (t[1].text === JSON_syntax.END_OBJECT)
+      if (t[0].value === SYNTAX_TOKENS.VALUE_SEPARATOR) {
+        if (t[1].value === SYNTAX_TOKENS.END_OBJECT)
           throw new Error(`[parser.object] No trailing commas allowed.`);
 
         t.shift();
       }
 
-      if (t[0].text === JSON_syntax.END_OBJECT) return [t.slice(1), output];
+      if (t[0].value === SYNTAX_TOKENS.END_OBJECT) return [t.slice(1), output];
     }
 
     throw new Error(
-      `[parser.object] Missing expected "${JSON_syntax.END_OBJECT}".`
+      `[parser.object] Missing expected "${SYNTAX_TOKENS.END_OBJECT}".`
     );
   };
 
@@ -260,7 +240,7 @@ export default class JSONParser {
 
       if (
         !Array.isArray(value) &&
-        Object.values(JSON_syntax).includes(value as string)
+        Object.values(SYNTAX_TOKENS).includes(value as string)
       )
         break;
 
@@ -269,18 +249,18 @@ export default class JSONParser {
 
       if (!t.length) break;
 
-      if (t[0].text === JSON_syntax.VALUE_SEPARATOR) {
-        if (t[1].text === JSON_syntax.END_ARRAY)
+      if (t[0].value === SYNTAX_TOKENS.VALUE_SEPARATOR) {
+        if (t[1].value === SYNTAX_TOKENS.END_ARRAY)
           throw new Error(`[parser.array] No trailing commas allowed.`);
 
         t.shift();
       }
 
-      if (t[0].text === JSON_syntax.END_ARRAY) return [t.slice(1), output];
+      if (t[0].value === SYNTAX_TOKENS.END_ARRAY) return [t.slice(1), output];
     }
 
     throw new Error(
-      `[parser.array] Missing expected "${JSON_syntax.END_ARRAY}".`
+      `[parser.array] Missing expected "${SYNTAX_TOKENS.END_ARRAY}".`
     );
   };
 }
